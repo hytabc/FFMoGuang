@@ -1,0 +1,21 @@
+{
+  "Author": "FFMoGuang",
+  "Name": "魔光键影助手",
+  "InternalName": "FFMoGuang",
+  "AssemblyVersion": "0.1.1.0",
+  "MinimumDalamudVersion": "15.0.0.0",
+  "Description": "支持国服魔光键影的自动节点绑定与连续输入。内置区域1359的输入框和20个目标槽位适配，提供开始/停止和毫秒延迟设置。",
+  "ApplicableVersion": "any",
+  "Tags": [
+    "gold saucer",
+    "typing",
+    "魔光键影"
+  ],
+  "DalamudApiLevel": 15,
+  "LoadRequiredState": 0,
+  "LoadSync": false,
+  "CanUnloadAsync": false,
+  "LoadPriority": 0,
+  "Punchline": "读取魔光键影目标词条，填入并提交",
+  "AcceptsFeedback": true
+}

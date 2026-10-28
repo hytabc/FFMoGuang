@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "FFMoGuang/0.1.1.0": {
+        "dependencies": {
+          "FFMoGuang.Core": "1.0.0"
+        },
+        "runtime": {
+          "FFMoGuang.dll": {}
+        }
+      },
+      "FFMoGuang.Core/1.0.0": {
+        "runtime": {
+          "FFMoGuang.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "FFMoGuang/0.1.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "FFMoGuang.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
