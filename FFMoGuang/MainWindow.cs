@@ -1,5 +1,7 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.Keys;
+using FFMoGuang.Core;
 
 namespace FFMoGuang;
 
@@ -15,6 +17,7 @@ public sealed class MainWindow(Plugin plugin)
     private bool randomizeSubmitDelay;
     private int submitDelayMinMs;
     private int submitDelayMaxMs;
+    private HotkeyOptions? hotkeyDraft;
 
     public void Open() => open = true;
 
@@ -41,14 +44,14 @@ public sealed class MainWindow(Plugin plugin)
         }
         ImGui.TextUnformatted(state.Status);
         ImGui.BeginDisabled(state.Running);
-        if (ImGui.Button("开始（F9）", new Vector2(120, 0)))
+        if (ImGui.Button($"开始（{KeyName(state.Hotkeys.StartKey)}）###start"))
         {
             ClampDelayInputs();
             plugin.Start(operationDelayMs, intervalMs, randomizeSubmitDelay, submitDelayMinMs, submitDelayMaxMs);
         }
         ImGui.EndDisabled();
         ImGui.SameLine();
-        if (ImGui.Button("停止（F8）", new Vector2(100, 0))) plugin.Stop();
+        if (ImGui.Button($"停止（{KeyName(state.Hotkeys.StopKey)}）###stop")) plugin.Stop();
         ImGui.SameLine();
         ImGui.BeginDisabled(state.Running);
         if (ImGui.Button("自动绑定魔光键影")) plugin.AutoBind();
@@ -56,6 +59,7 @@ public sealed class MainWindow(Plugin plugin)
         ImGui.SameLine();
         ImGui.TextUnformatted($"自动提交请求：{state.Submissions}    手动 Enter 清空：{state.ManualSubmissions}");
         ImGui.TextUnformatted("最近词条：" + state.LastWord);
+        DrawHotkeys(state);
         if (ImGui.RadioButton("自动提交", !state.Options.ManualSubmit))
             plugin.SetOptions(state.Options with { ManualSubmit = false });
         ImGui.SameLine();
@@ -127,7 +131,7 @@ public sealed class MainWindow(Plugin plugin)
             ? $"随机 {state.Options.SubmitDelayMinMs}–{state.Options.SubmitDelayMaxMs}" : state.Options.FillDelayMs.ToString();
         ImGui.TextUnformatted($"已保存：操作 {savedOperation} ms / 间隔 {state.Options.IntervalMs} ms");
         if (state.SubmitDelayMs.HasValue) ImGui.TextUnformatted($"本次自动提交等待：{state.SubmitDelayMs.Value} ms");
-        ImGui.TextWrapped("范围 0–60000 ms；输入完成后每次独立取值，等待中不重新抽取。上限低于下限时按下限保存。点击开始会保存当前延迟；F9 使用已保存参数。运行中保存会停止。");
+        ImGui.TextWrapped("范围 0–60000 ms；输入完成后每次独立取值，等待中不重新抽取。上限低于下限时按下限保存。点击开始会保存当前延迟；开始快捷键使用已保存参数。运行中保存会停止。");
         ImGui.TextWrapped(state.Notice);
         ImGui.Separator();
         DrawLeaderboard(state);
@@ -224,6 +228,51 @@ public sealed class MainWindow(Plugin plugin)
             ImGui.EndChild();
         }
         ImGui.End();
+    }
+
+    private static string KeyName(int key) => key switch
+    {
+        0x08 => "Backspace", 0x09 => "Tab", 0x0D => "Enter", 0x1B => "Esc", 0x20 => "Space",
+        >= 0x30 and <= 0x39 or >= 0x41 and <= 0x5A => ((char)key).ToString(),
+        >= 0x70 and <= 0x87 => $"F{key - 0x6F}",
+        _ => ((VirtualKey)key).ToString(),
+    };
+
+    private int DrawKeySelector(string label, int key)
+    {
+        ImGui.SetNextItemWidth(180);
+        if (ImGui.BeginCombo(label, KeyName(key)))
+        {
+            foreach (var candidate in plugin.HotkeyKeys)
+            {
+                if (ImGui.Selectable($"{KeyName(candidate)}##key{candidate}", candidate == key)) key = candidate;
+                if (candidate == key) ImGui.SetItemDefaultFocus();
+            }
+            ImGui.EndCombo();
+        }
+        return key;
+    }
+
+    private void DrawHotkeys(PluginView state)
+    {
+        if (!ImGui.CollapsingHeader("自定义快捷键")) return;
+        hotkeyDraft ??= state.Hotkeys;
+        hotkeyDraft = hotkeyDraft with
+        {
+            StartKey = DrawKeySelector("开始按键", hotkeyDraft.StartKey),
+            StopKey = DrawKeySelector("停止按键", hotkeyDraft.StopKey),
+        };
+        ImGui.BeginDisabled(!hotkeyDraft.IsValid);
+        if (ImGui.Button("保存快捷键")) plugin.SetHotkeys(hotkeyDraft);
+        ImGui.EndDisabled();
+        ImGui.SameLine();
+        if (ImGui.Button("恢复默认 F9 / F8"))
+        {
+            hotkeyDraft = new();
+            plugin.SetHotkeys(hotkeyDraft);
+        }
+        if (!hotkeyDraft.IsValid) ImGui.TextUnformatted("开始和停止不能使用相同按键。");
+        ImGui.TextWrapped($"已保存：{KeyName(state.Hotkeys.StartKey)} 开始 / {KeyName(state.Hotkeys.StopKey)} 停止。支持单个键盘按键，不含修饰键组合。保存会停止运行；长按开始不重复触发，同时按下时停止优先。游戏前台且 Dalamud 界面未捕获键盘时才允许快捷键开始，面板关闭时仍有效。");
     }
 
     private void ClampDelayInputs()

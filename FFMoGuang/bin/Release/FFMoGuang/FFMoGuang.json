@@ -2,7 +2,7 @@
   "Author": "FFMoGuang",
   "Name": "魔光键影助手",
   "InternalName": "FFMoGuang",
-  "AssemblyVersion": "0.3.3.0",
+  "AssemblyVersion": "0.3.4.0",
   "MinimumDalamudVersion": "15.0.0.0",
   "Description": "国服魔光键影辅助输入：直接填词、Unicode 或实验性搜狗全拼字母输入，可调随机节奏及手动 Enter，改进去重采样。AFK 效果及队友数据仍待实机验证。",
   "ApplicableVersion": "any",

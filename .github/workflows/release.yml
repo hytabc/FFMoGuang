@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing version tag, for example v0.3.4.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate release tag
+        shell: pwsh
+        run: |
+          if ($env:RELEASE_TAG -cnotmatch '^v\d+\.\d+\.\d+\.\d+$') {
+            throw 'Use a version tag such as v0.3.4.0.'
+          }
+          git show-ref --verify "refs/tags/$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'Release requires an existing Git tag.' }
+      - name: Install Dalamud CN build dependencies
+        shell: pwsh
+        run: ./scripts/Install-Dalamud.ps1 -Destination (Join-Path $env:RUNNER_TEMP 'dalamud-cn')
+      - name: Build, test and verify package
+        shell: pwsh
+        run: ./build.ps1 -ExpectedVersion $env:RELEASE_TAG.Substring(1)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: artifacts/FFMoGuang-*.zip
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: artifacts
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$RELEASE_TAG" artifacts/FFMoGuang-*.zip --verify-tag --title "FFMoGuang $RELEASE_TAG" --generate-notes

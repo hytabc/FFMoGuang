@@ -12,7 +12,7 @@ public sealed record PluginView(bool Running, string Status, string LastWord, in
     string GameVersion, uint Territory, uint BoundTerritory, string InputBinding, string[] WordBindings,
     AnswerOptions Options, AnswerFrame Preview, InspectorSnapshot Inspector, string Notice,
     TypingLeaderboard Leaderboard, RankingMetric RankingMetric, HeartbeatOptions Heartbeat,
-    string HeartbeatStatus, string CaptureStatus, string KeyboardStatus, int? SubmitDelayMs);
+    string HeartbeatStatus, string CaptureStatus, string KeyboardStatus, int? SubmitDelayMs, HotkeyOptions Hotkeys);
 
 public sealed class Plugin : IDalamudPlugin
 {
@@ -40,7 +40,7 @@ public sealed class Plugin : IDalamudPlugin
     private volatile bool inspectRequested;
     private volatile bool disposed;
     private volatile bool keyboardCaptured;
-    private bool? startKeyWasDown;
+    private readonly HotkeyTrigger hotkeyTrigger = new();
     private PluginView view;
 
     public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commands, IFramework framework,
@@ -52,6 +52,8 @@ public sealed class Plugin : IDalamudPlugin
         this.framework = framework;
         client = clientState;
         keys = keyState;
+        HotkeyKeys = keys.GetValidVirtualKeys().Select(key => (int)key)
+            .Where(HotkeyOptions.IsSupported).Distinct().Order().ToArray();
         log = pluginLog;
         chat = chatGui;
         this.playerState = playerState;
@@ -59,6 +61,9 @@ public sealed class Plugin : IDalamudPlugin
         config.Words ??= [];
         config.Options = (config.Options ?? new()).Clamp();
         config.Heartbeat = (config.Heartbeat ?? new()).Clamp();
+        config.Hotkeys = (config.Hotkeys ?? new()).Validate();
+        if (!HotkeyKeys.Contains(config.Hotkeys.StartKey) || !HotkeyKeys.Contains(config.Hotkeys.StopKey))
+            config.Hotkeys = new();
         port = new(config, gameGui, client, () => keyboardCaptured);
         controller = new(port);
         controller.ManualSubmissionObserved += OnManualSubmissionObserved;
@@ -70,7 +75,7 @@ public sealed class Plugin : IDalamudPlugin
         window = new(this);
         commands.AddHandler("/mg", new CommandInfo(OnCommand)
         {
-            HelpMessage = "魔光键影助手：/mg 面板；/mg bind 自动绑定；/mg start 启动；/mg stop 停止；/mg dump 导出节点。F9 开始，F8 停止。",
+            HelpMessage = "魔光键影助手：/mg 面板；/mg bind 自动绑定；/mg start 启动；/mg stop 停止；/mg dump 导出节点。默认 F9 开始、F8 停止，可在面板自定义快捷键。",
         });
         pluginInterface.UiBuilder.Draw += window.Draw;
         pluginInterface.UiBuilder.OpenConfigUi += window.Open;
@@ -79,6 +84,7 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     public PluginView View => Volatile.Read(ref view);
+    public IReadOnlyList<int> HotkeyKeys { get; }
     public void SetInspecting(bool value) => inspectRequested = value;
     public void SetKeyboardCapture(bool value) => keyboardCaptured = value;
     public void Start(int? operationDelayMs = null, int? intervalMs = null, bool? randomizeSubmitDelay = null,
@@ -115,6 +121,19 @@ public sealed class Plugin : IDalamudPlugin
     public void SetRankingMetric(RankingMetric metric) => Enqueue(() => { config.RankingMetric = metric; Save(); });
     public void ResetStatistics() => Enqueue(statistics.Reset);
     public void SetHeartbeat(HeartbeatOptions options) => Enqueue(() => { config.Heartbeat = options.Clamp(); Save(); });
+    public void SetHotkeys(HotkeyOptions options) => Enqueue(() =>
+    {
+        if (!options.IsValid || !HotkeyKeys.Contains(options.StartKey) || !HotkeyKeys.Contains(options.StopKey))
+        {
+            notice = "开始与停止必须选择不同的有效按键。";
+            return;
+        }
+        controller.Stop("快捷键已修改，请重新开始");
+        config.Hotkeys = options;
+        hotkeyTrigger.Reset();
+        Save();
+        notice = "快捷键已保存，重新加载后保留。";
+    });
     public void StartCapture() => Enqueue(() =>
     {
         if (!client.IsLoggedIn || client.TerritoryType != KeyboundProfile.SupportedTerritory)
@@ -250,16 +269,15 @@ public sealed class Plugin : IDalamudPlugin
         {
             var now = Environment.TickCount64;
             controller.ObserveEnterKey(keys[VirtualKey.RETURN], now);
-            var startKeyDown = keys[VirtualKey.F9];
-            var startPressed = startKeyWasDown == false && startKeyDown;
-            startKeyWasDown = startKeyDown;
-            // Hotkeys are processed every frame; F8 wins if both are held. F9 requires a fresh press.
             while (requests.TryDequeue(out var action)) action();
-            if (keys[VirtualKey.F8])
+            // Read the saved bindings after queued changes; stop always wins, even while editing UI.
+            var hotkey = hotkeyTrigger.Poll(keys[(VirtualKey)config.Hotkeys.StartKey],
+                keys[(VirtualKey)config.Hotkeys.StopKey], port.IsForeground && !keyboardCaptured);
+            if (hotkey == HotkeyAction.Stop)
             {
-                if (controller.Running) controller.Stop("F8：已停止");
+                if (controller.Running) controller.Stop("停止快捷键：已停止");
             }
-            else if (startPressed && !controller.Running && port.IsForeground) StartOnFramework();
+            else if (hotkey == HotkeyAction.Start && !controller.Running) StartOnFramework();
             heartbeat.Tick(now, controller.Running && !config.Options.ManualSubmit && !config.Options.KeyboardInput, config.Heartbeat);
             port.TickKeyboard(now, controller.Running);
             if (now < nextTick) return;
@@ -295,7 +313,7 @@ public sealed class Plugin : IDalamudPlugin
         controller.LastWord, controller.Submissions, controller.ManualSubmissions, port.GameVersion, client.TerritoryType, config.Territory,
         config.Input?.Key ?? "未绑定", config.Words.Select(w => w.Key).ToArray(), config.Options,
         preview, inspector, notice, statistics.Snapshot(Environment.TickCount64, config.RankingMetric),
-        config.RankingMetric, config.Heartbeat, heartbeat.Status, capture.Status, port.KeyboardStatus, controller.PendingSubmitDelayMs);
+        config.RankingMetric, config.Heartbeat, heartbeat.Status, capture.Status, port.KeyboardStatus, controller.PendingSubmitDelayMs, config.Hotkeys);
 
     private void Enqueue(Action action) { if (!disposed) requests.Enqueue(action); }
     private void Save() => pluginInterface.SavePluginConfig(config);

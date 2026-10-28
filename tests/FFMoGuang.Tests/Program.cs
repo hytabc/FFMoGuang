@@ -6,6 +6,45 @@ using System.Text;
 // No game/Dalamud dependency. Failure exits nonzero, suitable for CI and a clean SDK installation.
 var cases = new (string Name, Action Test)[]
 {
+    ("hotkeys preserve defaults and round trip custom keys", () =>
+    {
+        var defaults = JsonSerializer.Deserialize<HotkeyOptions>("{}")!;
+        Equal(0x78, defaults.StartKey);
+        Equal(0x77, defaults.StopKey);
+        var custom = new HotkeyOptions { StartKey = 0x41, StopKey = 0x7B };
+        Equal(custom, JsonSerializer.Deserialize<HotkeyOptions>(JsonSerializer.Serialize(custom))!.Validate());
+    }),
+    ("hotkeys reject conflicts invalid keys modifiers and mouse buttons", () =>
+    {
+        foreach (var key in new[] { -1, 0, 1, 0x10, 0x11, 0x12, 0x5B, 0xFF })
+            Equal(new HotkeyOptions(), new HotkeyOptions { StartKey = key }.Validate());
+        Equal(false, new HotkeyOptions { StartKey = 0x77 }.IsValid);
+        Equal(true, new HotkeyOptions { StartKey = 0x41, StopKey = 0x42 }.IsValid);
+    }),
+    ("start hotkey requires release then fresh press including after rebind", () =>
+    {
+        var trigger = new HotkeyTrigger();
+        Equal(HotkeyAction.None, trigger.Poll(true, false, true));
+        Equal(HotkeyAction.None, trigger.Poll(false, false, true));
+        Equal(HotkeyAction.Start, trigger.Poll(true, false, true));
+        Equal(HotkeyAction.None, trigger.Poll(true, false, true));
+        trigger.Reset();
+        Equal(HotkeyAction.None, trigger.Poll(true, false, true));
+        trigger.Poll(false, false, true);
+        Equal(HotkeyAction.Start, trigger.Poll(true, false, true));
+    }),
+    ("stop hotkey wins and blocked start is not deferred", () =>
+    {
+        var trigger = new HotkeyTrigger();
+        trigger.Poll(false, false, true);
+        Equal(HotkeyAction.Stop, trigger.Poll(true, true, true));
+        Equal(HotkeyAction.None, trigger.Poll(true, false, true));
+        trigger.Poll(false, false, false);
+        Equal(HotkeyAction.None, trigger.Poll(true, false, false));
+        Equal(HotkeyAction.None, trigger.Poll(true, false, true));
+        Equal(HotkeyAction.Stop, trigger.Poll(false, true, false));
+        Equal(HotkeyAction.Start, trigger.Poll(true, false, true));
+    }),
     ("exact Chinese, Unicode and punctuation reach submit", () =>
     {
         var (port, engine) = Create("艾米利欧·测试 ！𠮷 ");
