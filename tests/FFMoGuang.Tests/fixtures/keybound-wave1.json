@@ -1,0 +1,320 @@
+{
+  "GameVersion": "2026.10.06.0000.0000",
+  "Territory": 1359,
+  "Nodes": [
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20019,
+          20
+        ],
+        "Key": "KTGEWord[1]/20019/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20018,
+          20
+        ],
+        "Key": "KTGEWord[1]/20018/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20017,
+          20
+        ],
+        "Key": "KTGEWord[1]/20017/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20016,
+          20
+        ],
+        "Key": "KTGEWord[1]/20016/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20015,
+          20
+        ],
+        "Key": "KTGEWord[1]/20015/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20014,
+          20
+        ],
+        "Key": "KTGEWord[1]/20014/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20013,
+          20
+        ],
+        "Key": "KTGEWord[1]/20013/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20012,
+          20
+        ],
+        "Key": "KTGEWord[1]/20012/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20011,
+          20
+        ],
+        "Key": "KTGEWord[1]/20011/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20010,
+          20
+        ],
+        "Key": "KTGEWord[1]/20010/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20009,
+          20
+        ],
+        "Key": "KTGEWord[1]/20009/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20008,
+          20
+        ],
+        "Key": "KTGEWord[1]/20008/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20007,
+          20
+        ],
+        "Key": "KTGEWord[1]/20007/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20006,
+          20
+        ],
+        "Key": "KTGEWord[1]/20006/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20005,
+          20
+        ],
+        "Key": "KTGEWord[1]/20005/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20004,
+          20
+        ],
+        "Key": "KTGEWord[1]/20004/20"
+      },
+      "IsInput": false,
+      "Text": "",
+      "Visible": false,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20003,
+          20
+        ],
+        "Key": "KTGEWord[1]/20003/20"
+      },
+      "IsInput": false,
+      "Text": "罗榭",
+      "Visible": true,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20002,
+          20
+        ],
+        "Key": "KTGEWord[1]/20002/20"
+      },
+      "IsInput": false,
+      "Text": "食人魔",
+      "Visible": true,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          20001,
+          20
+        ],
+        "Key": "KTGEWord[1]/20001/20"
+      },
+      "IsInput": false,
+      "Text": "耳环",
+      "Visible": true,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGEWord",
+        "Index": 1,
+        "Path": [
+          2,
+          20
+        ],
+        "Key": "KTGEWord[1]/2/20"
+      },
+      "IsInput": false,
+      "Text": "治疗",
+      "Visible": true,
+      "HasCallback": false
+    },
+    {
+      "Binding": {
+        "Addon": "KTGInput",
+        "Index": 1,
+        "Path": [
+          7
+        ],
+        "Key": "KTGInput[1]/7"
+      },
+      "IsInput": true,
+      "Text": "",
+      "Visible": true,
+      "HasCallback": true
+    }
+  ]
+}

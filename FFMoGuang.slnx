@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="FFMoGuang.Core/FFMoGuang.Core.csproj" />
+  <Project Path="FFMoGuang/FFMoGuang.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/FFMoGuang.Tests/FFMoGuang.Tests.csproj" />
+  </Folder>
+</Solution>

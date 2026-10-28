@@ -1,0 +1,18 @@
+<Project Sdk="Dalamud.CN.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <AssemblyName>FFMoGuang</AssemblyName>
+    <RootNamespace>FFMoGuang</RootNamespace>
+    <Version>0.1.1.0</Version>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DalamudApiLevel>15</DalamudApiLevel>
+    <MinimumDalamudVersion>15.0.0.0</MinimumDalamudVersion>
+    <Name>魔光键影助手</Name>
+    <Author>FFMoGuang</Author>
+    <Punchline>读取魔光键影目标词条，填入并提交</Punchline>
+    <Description>支持国服魔光键影的自动节点绑定与连续输入。内置区域1359的输入框和20个目标槽位适配，提供开始/停止和毫秒延迟设置。</Description>
+    <Tags>gold saucer;typing;魔光键影</Tags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../FFMoGuang.Core/FFMoGuang.Core.csproj" />
+  </ItemGroup>
+</Project>
