@@ -2,4 +2,5 @@
 .idea/
 .vs/
 artifacts/
+.tools/
 *.user

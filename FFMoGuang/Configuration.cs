@@ -12,4 +12,6 @@ public sealed class Configuration : IPluginConfiguration
     public NodeBinding? Input { get; set; }
     public List<NodeBinding> Words { get; set; } = [];
     public AnswerOptions Options { get; set; } = new();
+    public HeartbeatOptions Heartbeat { get; set; } = new();
+    public RankingMetric RankingMetric { get; set; } = RankingMetric.Speed;
 }

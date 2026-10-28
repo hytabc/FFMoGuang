@@ -9,6 +9,7 @@
     <ProjectReference Include="../../FFMoGuang.Core/FFMoGuang.Core.csproj" />
     <Compile Include="../../FFMoGuang/UiNodes.cs" Link="UiNodes.cs" />
     <Compile Include="../../FFMoGuang/BindingProfile.cs" Link="BindingProfile.cs" />
+    <Compile Include="../../FFMoGuang/NativeHeartbeatKeyboard.cs" Link="NativeHeartbeatKeyboard.cs" />
     <None Include="fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

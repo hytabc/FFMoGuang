@@ -8,9 +8,11 @@ using FFMoGuang.Core;
 
 namespace FFMoGuang;
 
-public sealed record PluginView(bool Running, string Status, string LastWord, int Submissions,
+public sealed record PluginView(bool Running, string Status, string LastWord, int Submissions, int ManualSubmissions,
     string GameVersion, uint Territory, uint BoundTerritory, string InputBinding, string[] WordBindings,
-    AnswerOptions Options, AnswerFrame Preview, InspectorSnapshot Inspector, string Notice);
+    AnswerOptions Options, AnswerFrame Preview, InspectorSnapshot Inspector, string Notice,
+    TypingLeaderboard Leaderboard, RankingMetric RankingMetric, HeartbeatOptions Heartbeat,
+    string HeartbeatStatus, string CaptureStatus, string KeyboardStatus, int? SubmitDelayMs);
 
 public sealed class Plugin : IDalamudPlugin
 {
@@ -25,17 +27,25 @@ public sealed class Plugin : IDalamudPlugin
     private readonly GameUiPort port;
     private readonly AnswerController controller;
     private readonly MainWindow window;
+    private readonly IPlayerState playerState;
+    private readonly TypingStatistics statistics = new();
+    private readonly KeyboardHeartbeat heartbeat;
+    private readonly GameEventCapture capture;
     private readonly ConcurrentQueue<Action> requests = new();
     private InspectorSnapshot inspector = new([], "展开检查器后扫描当前游戏 UI");
     private string notice = "进入魔光键影对局后，可点击“自动绑定魔光键影”；首次点击“开始”也会自动识别。";
     private long nextScan;
     private long nextTick;
+    private long nextRoster;
     private volatile bool inspectRequested;
     private volatile bool disposed;
+    private volatile bool keyboardCaptured;
+    private bool? startKeyWasDown;
     private PluginView view;
 
     public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commands, IFramework framework,
-        IGameGui gameGui, IClientState clientState, IKeyState keyState, IPluginLog pluginLog, IChatGui chatGui)
+        IGameGui gameGui, IClientState clientState, IKeyState keyState, IPluginLog pluginLog, IChatGui chatGui,
+        IPlayerState playerState, IAddonLifecycle addonLifecycle)
     {
         this.pluginInterface = pluginInterface;
         this.commands = commands;
@@ -44,16 +54,23 @@ public sealed class Plugin : IDalamudPlugin
         keys = keyState;
         log = pluginLog;
         chat = chatGui;
+        this.playerState = playerState;
         config = pluginInterface.GetPluginConfig() as Configuration ?? new();
         config.Words ??= [];
         config.Options = (config.Options ?? new()).Clamp();
-        port = new(config, gameGui, client);
+        config.Heartbeat = (config.Heartbeat ?? new()).Clamp();
+        port = new(config, gameGui, client, () => keyboardCaptured);
         controller = new(port);
+        controller.ManualSubmissionObserved += OnManualSubmissionObserved;
+        controller.KeyboardSubmissionObserved += OnKeyboardSubmissionObserved;
+        heartbeat = new(new NativeHeartbeatKeyboard(port.HeartbeatReady));
+        capture = new(addonLifecycle, client, log);
+        port.AutomaticSubmitted += OnAutomaticSubmitted;
         view = MakeView(new(false, "", "", [], "尚未读取游戏 UI"));
         window = new(this);
         commands.AddHandler("/mg", new CommandInfo(OnCommand)
         {
-            HelpMessage = "魔光键影助手：/mg 面板；/mg bind 自动绑定；/mg start 启动；/mg stop 停止；/mg dump 导出节点。F8 停止。",
+            HelpMessage = "魔光键影助手：/mg 面板；/mg bind 自动绑定；/mg start 启动；/mg stop 停止；/mg dump 导出节点。F9 开始，F8 停止。",
         });
         pluginInterface.UiBuilder.Draw += window.Draw;
         pluginInterface.UiBuilder.OpenConfigUi += window.Open;
@@ -63,15 +80,24 @@ public sealed class Plugin : IDalamudPlugin
 
     public PluginView View => Volatile.Read(ref view);
     public void SetInspecting(bool value) => inspectRequested = value;
-    public void Start(int? operationDelayMs = null, int? intervalMs = null) => Enqueue(() =>
+    public void SetKeyboardCapture(bool value) => keyboardCaptured = value;
+    public void Start(int? operationDelayMs = null, int? intervalMs = null, bool? randomizeSubmitDelay = null,
+        int? submitDelayMinMs = null, int? submitDelayMaxMs = null)
+        => Enqueue(() => StartOnFramework(operationDelayMs, intervalMs, randomizeSubmitDelay, submitDelayMinMs, submitDelayMaxMs));
+    private void StartOnFramework(int? operationDelayMs = null, int? intervalMs = null, bool? randomizeSubmitDelay = null,
+        int? submitDelayMinMs = null, int? submitDelayMaxMs = null)
     {
         if (controller.Running) return;
-        if (operationDelayMs.HasValue || intervalMs.HasValue)
+        if (operationDelayMs.HasValue || intervalMs.HasValue || randomizeSubmitDelay.HasValue
+            || submitDelayMinMs.HasValue || submitDelayMaxMs.HasValue)
         {
             config.Options = (config.Options with
             {
                 FillDelayMs = operationDelayMs ?? config.Options.FillDelayMs,
                 IntervalMs = intervalMs ?? config.Options.IntervalMs,
+                RandomizeSubmitDelay = randomizeSubmitDelay ?? config.Options.RandomizeSubmitDelay,
+                SubmitDelayMinMs = submitDelayMinMs ?? config.Options.SubmitDelayMinMs,
+                SubmitDelayMaxMs = submitDelayMaxMs ?? config.Options.SubmitDelayMaxMs,
             }).Clamp();
             Save();
         }
@@ -82,10 +108,47 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
         controller.Start(Environment.TickCount64, config.Options);
-    });
+    }
     public void Stop() => Enqueue(() => controller.Stop());
     public void AutoBind() => Enqueue(() => { controller.Stop(); TryAutoBind(); });
     public void Refresh() => Enqueue(() => { nextScan = 0; inspector = port.Inspect(); });
+    public void SetRankingMetric(RankingMetric metric) => Enqueue(() => { config.RankingMetric = metric; Save(); });
+    public void ResetStatistics() => Enqueue(statistics.Reset);
+    public void SetHeartbeat(HeartbeatOptions options) => Enqueue(() => { config.Heartbeat = options.Clamp(); Save(); });
+    public void StartCapture() => Enqueue(() =>
+    {
+        if (!client.IsLoggedIn || client.TerritoryType != KeyboundProfile.SupportedTerritory)
+        {
+            notice = "请进入魔光键影对局后开始采样";
+            return;
+        }
+        capture.Start(port.GameVersion);
+        notice = "正在采样 30 秒；请自己和队友分别发送几次词条，再导出采样。";
+    });
+    public void ExportCapture() => Enqueue(() =>
+    {
+        var directory = pluginInterface.GetPluginConfigDirectory();
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, $"typing-capture-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+        File.WriteAllText(path, JsonSerializer.Serialize(capture.Export(), new JsonSerializerOptions { WriteIndented = true }));
+        notice = "发送采样已导出：" + path;
+        chat.Print("[魔光键影] " + notice);
+    });
+    private void OnAutomaticSubmitted(string text)
+    {
+        statistics.RecordSelf(text, Environment.TickCount64);
+        capture.RecordAutomatic(text);
+    }
+    private void OnManualSubmissionObserved(string text)
+    {
+        statistics.RecordSelf(text, Environment.TickCount64);
+        capture.RecordManual(text);
+    }
+    private void OnKeyboardSubmissionObserved(string text)
+    {
+        statistics.RecordSelf(text, Environment.TickCount64);
+        capture.RecordKeyboard(text);
+    }
 
     private bool TryAutoBind()
     {
@@ -185,13 +248,31 @@ public sealed class Plugin : IDalamudPlugin
         if (disposed) return;
         try
         {
-            // Stop requests and F8 are processed every frame, independently of the answer polling rate.
-            while (requests.TryDequeue(out var action)) action();
-            if (controller.Running && keys[VirtualKey.F8]) controller.Stop("F8：已停止");
             var now = Environment.TickCount64;
+            controller.ObserveEnterKey(keys[VirtualKey.RETURN], now);
+            var startKeyDown = keys[VirtualKey.F9];
+            var startPressed = startKeyWasDown == false && startKeyDown;
+            startKeyWasDown = startKeyDown;
+            // Hotkeys are processed every frame; F8 wins if both are held. F9 requires a fresh press.
+            while (requests.TryDequeue(out var action)) action();
+            if (keys[VirtualKey.F8])
+            {
+                if (controller.Running) controller.Stop("F8：已停止");
+            }
+            else if (startPressed && !controller.Running && port.IsForeground) StartOnFramework();
+            heartbeat.Tick(now, controller.Running && !config.Options.ManualSubmit && !config.Options.KeyboardInput, config.Heartbeat);
+            port.TickKeyboard(now, controller.Running);
             if (now < nextTick) return;
             nextTick = now + 50;
+            if (now >= nextRoster)
+            {
+                nextRoster = now + 250;
+                var roster = port.ReadTeamRoster(playerState.CharacterName);
+                if (roster != null) statistics.SetRoster(roster);
+                else statistics.End(now);
+            }
             controller.Tick(now);
+            if (!controller.Running) port.ReleaseKeyboard();
             if (inspectRequested && now >= nextScan)
             {
                 nextScan = now + 750;
@@ -202,6 +283,8 @@ public sealed class Plugin : IDalamudPlugin
         catch (Exception ex)
         {
             controller.Stop("读取或输入异常，已停止；详情见 /xllog");
+            heartbeat.Release();
+            port.ReleaseKeyboard();
             notice = ex.Message;
             log.Error(ex, "FFMoGuang update failed");
             Volatile.Write(ref view, MakeView(new(false, "", "", [], controller.Status)));
@@ -209,9 +292,10 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private PluginView MakeView(AnswerFrame preview) => new(controller.Running, controller.Status,
-        controller.LastWord, controller.Submissions, port.GameVersion, client.TerritoryType, config.Territory,
+        controller.LastWord, controller.Submissions, controller.ManualSubmissions, port.GameVersion, client.TerritoryType, config.Territory,
         config.Input?.Key ?? "未绑定", config.Words.Select(w => w.Key).ToArray(), config.Options,
-        preview, inspector, notice);
+        preview, inspector, notice, statistics.Snapshot(Environment.TickCount64, config.RankingMetric),
+        config.RankingMetric, config.Heartbeat, heartbeat.Status, capture.Status, port.KeyboardStatus, controller.PendingSubmitDelayMs);
 
     private void Enqueue(Action action) { if (!disposed) requests.Enqueue(action); }
     private void Save() => pluginInterface.SavePluginConfig(config);
@@ -224,6 +308,12 @@ public sealed class Plugin : IDalamudPlugin
         pluginInterface.UiBuilder.OpenConfigUi -= window.Open;
         pluginInterface.UiBuilder.OpenMainUi -= window.Open;
         commands.RemoveHandler("/mg");
+        port.AutomaticSubmitted -= OnAutomaticSubmitted;
+        controller.ManualSubmissionObserved -= OnManualSubmissionObserved;
+        controller.KeyboardSubmissionObserved -= OnKeyboardSubmissionObserved;
+        capture.Dispose();
+        heartbeat.Release();
+        port.ReleaseKeyboard();
         // No native writes during unload, and no persisted auto-start flag.
         controller.Stop();
     }

@@ -8,14 +8,47 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 namespace FFMoGuang;
 
 /// <summary>Only call on Framework.Update. Never retain native pointers between calls.</summary>
-public sealed unsafe class GameUiPort(Configuration config, IGameGui gameGui, IClientState clientState) : IAnswerPort
+public sealed unsafe class GameUiPort(Configuration config, IGameGui gameGui, IClientState clientState,
+    Func<bool> keyboardCaptured) : IAnswerPort
 {
+    private readonly KeyboardTextInput textKeyboard = new(new NativeTextKeyboard());
+    private PinyinComposer? pinyin;
+    private string pinyinSession = "";
+    private WordTarget? pinyinTarget;
     public string GameVersion { get; } = ReadGameVersion();
+    public bool IsForeground => IsGameForeground();
+    public event Action<string>? AutomaticSubmitted;
+    public string KeyboardStatus => pinyin?.Status ?? "搜狗全拼尚未输入；请切换中文状态并关闭大写锁定";
+
+    public TeamRoster? ReadTeamRoster(string localName)
+    {
+        if (!clientState.IsLoggedIn || clientState.TerritoryType != KeyboundProfile.SupportedTerritory
+            || GameVersion != KeyboundProfile.SupportedVersion) return null;
+        var inputNode = Resolve(new("KTGInput", 1, [7]), out var inputAddon, out var inputShown);
+        if (inputNode == null || !inputShown || AsInput(inputNode) == null) return null;
+        var members = new List<TeamMember>();
+        for (var slot = 0; slot < 4; slot++)
+        {
+            var node = Resolve(new("KTGPlayerName", 1, [slot == 0 ? 2u : (uint)(20000 + slot), 3]), out _, out var visible);
+            if (node == null || !visible || node->Type != NodeType.Text) continue;
+            var name = ReadText((AtkTextNode*)node).Trim();
+            if (name.Length != 0) members.Add(new(slot, name, name == localName));
+        }
+        return members.Count == 0 ? null : new($"{inputAddon->Id}:{(nint)inputAddon:X}", members);
+    }
+
+    public bool HeartbeatReady()
+    {
+        if (CheckContext() != null || clientState.TerritoryType != KeyboundProfile.SupportedTerritory) return false;
+        var input = AsInput(Resolve(config.Input!, out _, out var visible));
+        return input != null && visible && input->Enabled;
+    }
 
     public AnswerFrame Read()
     {
         var reason = CheckContext();
         if (reason != null) return Unavailable(reason);
+        if (config.Options.PinyinInput && pinyin is { Error.Length: > 0 }) return Unavailable(pinyin.Error);
         var node = Resolve(config.Input!, out var addon, out var visible);
         var input = AsInput(node);
         if (input == null || !visible || !input->Enabled) return Unavailable("输入控件不存在、不可见或已禁用");
@@ -32,7 +65,65 @@ public sealed unsafe class GameUiPort(Configuration config, IGameGui gameGui, IC
             if (AnswerController.IsValid(target)) words.Add(target);
         }
         var session = $"{clientState.TerritoryType}/{addon->Id}:{(nint)addon:X}/{(nint)input:X}";
-        return new(true, session, input->RawString.ToString(), words);
+        return new(true, session, input->RawString.ToString(), words,
+            KeyboardReady: !config.Options.KeyboardInput || KeyboardFocused(input), Composing: pinyin?.Active == true);
+    }
+
+    private bool KeyboardFocused(AtkComponentTextInput* input)
+    {
+        if (keyboardCaptured() || input == null || !input->IsActive) return false;
+        var stage = AtkStage.Instance();
+        if (stage == null || stage->AtkInputManager == null || !stage->AtkInputManager->IsTextInputActive) return false;
+        var text = stage->AtkInputManager->TextInput;
+        return text != null && text->TargetTextInputEventInterface == &input->AtkTextInputEventInterface
+            && (pinyin?.Active == true || text->SelectionStart == text->SelectionEnd && text->CursorPos == text->TextLength);
+    }
+
+    public void TickKeyboard(long now, bool running)
+    {
+        // Releases are allowed after focus loss, but never start an input outside the guarded methods below.
+        var input = CheckContext() == null ? AsInput(Resolve(config.Input!, out _, out _)) : null;
+        textKeyboard.Tick(now, running && config.Options.KeyboardInput && KeyboardFocused(input));
+        if (!running || !config.Options.PinyinInput) pinyin?.Cancel();
+        else if (pinyin?.Active == true)
+        {
+            var frame = Read();
+            pinyin.Tick(now, pinyinTarget != null && Matches(frame, pinyinSession, pinyinTarget)
+                && frame.KeyboardReady && NativeTextKeyboard.ModifiersReleased(), frame.Input);
+        }
+    }
+    public void ReleaseKeyboard() { pinyin?.Cancel(); textKeyboard.Release(); }
+
+    public OperationResult TypeCharacter(string session, WordTarget target, string prefix, string character)
+    {
+        var frame = Read();
+        if (!config.Options.KeyboardInput || !Matches(frame, session, target) || !frame.KeyboardReady
+            || frame.Input != prefix || !target.Text.StartsWith(prefix + character, StringComparison.Ordinal))
+            return new(false, "逐字输入前目标、焦点或输入内容变化，已停止");
+        if (!NativeTextKeyboard.ModifiersReleased()) return new(false, "逐字输入时检测到 Enter 或修饰键，已停止");
+        if (!Rune.TryGetRuneAt(character, 0, out var rune) || rune.Utf16SequenceLength != character.Length)
+            return new(false, "逐字输入字符无效，已停止");
+        if (config.Options.PinyinInput && PinyinDictionary.IsHan(rune))
+        {
+            pinyin ??= new(textKeyboard, NativeIme.Read, new());
+            pinyinSession = session;
+            pinyinTarget = target;
+            return pinyin.Begin(rune, prefix, Environment.TickCount64, config.Options);
+        }
+        return textKeyboard.TypeCharacter(rune);
+    }
+
+    public OperationResult PressEnter(string session, WordTarget target)
+    {
+        var frame = Read();
+        if (!config.Options.KeyboardInput || !Matches(frame, session, target) || !frame.KeyboardReady || frame.Input != target.Text)
+            return new(false, "模拟 Enter 前目标、焦点或输入内容变化，已停止");
+        var input = AsInput(Resolve(config.Input!, out _, out _));
+        if (input == null || input->EvaluatedString.ToString() != target.Text || !NativeTextKeyboard.ModifiersReleased())
+            return new(false, "模拟 Enter 前求值文本或修饰键不符合要求，已停止");
+        if (config.Options.PinyinInput && (pinyin?.Active == true || NativeIme.Read().Composition.Length != 0))
+            return new(false, "仍有拼音组合未确认，不发送 Enter");
+        return textKeyboard.PressEnter(Environment.TickCount64);
     }
 
     public OperationResult Fill(string session, WordTarget target)
@@ -77,6 +168,7 @@ public sealed unsafe class GameUiPort(Configuration config, IGameGui gameGui, IC
         if (result == InputCallbackResult.ClearText) ClearOwnedInput(session, target.Text);
         else if (result != InputCallbackResult.None)
             return new(false, $"输入回调返回了不支持的结果 {result}，已停止");
+        AutomaticSubmitted?.Invoke(target.Text);
         return new(true);
     }
 

@@ -1,0 +1,341 @@
+[
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGPlayerName",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "2"
+      },
+      {
+        "Type": "Int",
+        "Value": "2"
+      },
+      {
+        "Type": "Float",
+        "Value": "1726"
+      },
+      {
+        "Type": "Float",
+        "Value": "1980"
+      },
+      {
+        "Type": "Float",
+        "Value": "3"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGPlayerName",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "0"
+      },
+      {
+        "Type": "Int",
+        "Value": "2"
+      },
+      {
+        "Type": "ManagedString",
+        "Value": "Player2"
+      },
+      {
+        "Type": "Int",
+        "Value": "1"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGPlayerName",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "2"
+      },
+      {
+        "Type": "Int",
+        "Value": "3"
+      },
+      {
+        "Type": "Float",
+        "Value": "1337"
+      },
+      {
+        "Type": "Float",
+        "Value": "2040"
+      },
+      {
+        "Type": "Float",
+        "Value": "3"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGPlayerName",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "0"
+      },
+      {
+        "Type": "Int",
+        "Value": "3"
+      },
+      {
+        "Type": "ManagedString",
+        "Value": "Player3"
+      },
+      {
+        "Type": "Int",
+        "Value": "0"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGHudScore",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "1"
+      },
+      {
+        "Type": "UInt",
+        "Value": "14860"
+      },
+      {
+        "Type": "UInt",
+        "Value": "0"
+      },
+      {
+        "Type": "UInt",
+        "Value": "0"
+      },
+      {
+        "Type": "UInt",
+        "Value": "10000"
+      },
+      {
+        "Type": "UInt",
+        "Value": "10"
+      },
+      {
+        "Type": "UInt",
+        "Value": "0"
+      },
+      {
+        "Type": "UInt",
+        "Value": "100"
+      },
+      {
+        "Type": "UInt",
+        "Value": "0"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGInput",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "3"
+      },
+      {
+        "Type": "Int",
+        "Value": "1920"
+      },
+      {
+        "Type": "Int",
+        "Value": "1508"
+      },
+      {
+        "Type": "Float",
+        "Value": "3"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGInput",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "6"
+      },
+      {
+        "Type": "ManagedString",
+        "Value": "Icon"
+      },
+      {
+        "Type": "Bool",
+        "Value": "False"
+      },
+      {
+        "Type": "Bool",
+        "Value": "False"
+      },
+      {
+        "Type": "Int",
+        "Value": "0"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGHudLog",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "3"
+      },
+      {
+        "Type": "Int",
+        "Value": "60"
+      },
+      {
+        "Type": "Int",
+        "Value": "270"
+      },
+      {
+        "Type": "Float",
+        "Value": "3"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGHudScore",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "3"
+      },
+      {
+        "Type": "Int",
+        "Value": "3780"
+      },
+      {
+        "Type": "Int",
+        "Value": "300"
+      },
+      {
+        "Type": "Float",
+        "Value": "3"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGPlayerName",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "2"
+      },
+      {
+        "Type": "Int",
+        "Value": "0"
+      },
+      {
+        "Type": "Float",
+        "Value": "2503"
+      },
+      {
+        "Type": "Float",
+        "Value": "1980"
+      },
+      {
+        "Type": "Float",
+        "Value": "3"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGPlayerName",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "0"
+      },
+      {
+        "Type": "Int",
+        "Value": "0"
+      },
+      {
+        "Type": "ManagedString",
+        "Value": "Player0"
+      },
+      {
+        "Type": "Int",
+        "Value": "0"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGPlayerName",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "2"
+      },
+      {
+        "Type": "Int",
+        "Value": "1"
+      },
+      {
+        "Type": "Float",
+        "Value": "2114"
+      },
+      {
+        "Type": "Float",
+        "Value": "2040"
+      },
+      {
+        "Type": "Float",
+        "Value": "3"
+      }
+    ]
+  },
+  {
+    "Milliseconds": 0,
+    "Addon": "KTGPlayerName",
+    "Event": "PreRefresh",
+    "Values": [
+      {
+        "Type": "Int",
+        "Value": "0"
+      },
+      {
+        "Type": "Int",
+        "Value": "1"
+      },
+      {
+        "Type": "ManagedString",
+        "Value": "Player1"
+      },
+      {
+        "Type": "Int",
+        "Value": "0"
+      }
+    ]
+  }
+]
